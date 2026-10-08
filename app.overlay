@@ -1,5 +1,0 @@
-/*
- * Board-level nodes (aliases usb-oe, usb-s, status-led-*, se2-en, se05x-i2c;
- * i2c0/i2c1; qdsd_nvs_partition; MCUboot slot0/slot1 partitions) come from
- * the QDSD board definition (BOARD_ROOT). Nothing app-specific is needed.
- */

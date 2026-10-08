@@ -1,0 +1,219 @@
+/dts-v1/;
+
+#include <nordic/nrf52840_qiaa.dtsi>
+#include "qdsd-pinctrl.dtsi"
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "QDSD Custom Companion Adapter";
+	compatible = "dtii,qdsd";
+
+	chosen {
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+		zephyr,console = &uart0;
+		zephyr,shell-uart = &uart0;
+		zephyr,uart-mcumgr = &uart0;
+	};
+
+	aliases {
+
+		/* USB data switch — TS3USB221A (U4) */
+		usb-oe = &usb_oe;
+		usb-s = &usb_s;
+
+		/* Status LED4 — common-anode RGB (LTST-C19FD1WT) */
+		status-led-green = &status_led_green;
+		status-led-orange = &status_led_orange;
+		status-led-blue = &status_led_blue;
+
+		/* SE050 ENA — IC2 pin 11, net SE2_EN */
+		se2-en = &se2_en;
+
+		/* Secure elements — I2C buses (see pinctrl header) */
+		se052-i2c = &i2c0;
+		se05x-i2c = &i2c0;  /* PlugNTrust nano-package alias */
+		se050-i2c = &i2c1;
+
+		watchdog0 = &wdt0;
+	};
+
+	/* ── GPIO outputs ────────────────────────────────────────────────── */
+
+	gpio_outputs {
+		compatible = "gpio-leds";
+
+		usb_oe: usb_oe {
+			/*
+			 * P0.08 — TS3USB221A ~OE (GPIO_OE), active-LOW.
+			 * Physical OE HIGH = switch disabled = USB data path blocked (safe).
+			 * Physical OE LOW  = switch enabled  = document-hash path active.
+			 */
+			gpios = <&gpio0 8 GPIO_ACTIVE_LOW>;
+			label = "USB_SWITCH_OE";
+		};
+
+		usb_s: usb_s {
+			/*
+			 * P0.06 — TS3USB221A S (GPIO_SEL), fixed at boot.
+			 * LOW  = route to B-port (DSC side per schematic default).
+			 * HIGH = route to A-port.
+			 */
+			gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+			label = "USB_SWITCH_S";
+		};
+
+		se2_en: se2_en {
+			/*
+			 * P0.13 — SE050C (IC2) ENA, net SE2_EN, GPIO_ACTIVE_HIGH.
+			 * The part stays in power-down until this pin is HIGH.
+			 * There is no default pull-up on the schematic; firmware
+			 * must drive it before any I2C1 traffic.
+			 */
+			gpios = <&gpio0 13 GPIO_ACTIVE_HIGH>;
+			label = "SE050_ENA";
+		};
+
+		status_led_green: status_led_green {
+			/* P0.14 — LED4 green channel */
+			gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
+			label = "STATUS_LED_GREEN";
+		};
+
+		status_led_orange: status_led_orange {
+			/* P0.15 — LED4 orange channel */
+			gpios = <&gpio0 15 GPIO_ACTIVE_LOW>;
+			label = "STATUS_LED_ORANGE";
+		};
+
+		status_led_blue: status_led_blue {
+			/* P0.16 — LED4 blue channel */
+			gpios = <&gpio0 16 GPIO_ACTIVE_LOW>;
+			label = "STATUS_LED_BLUE";
+		};
+	};
+};
+
+/* ── SoC peripherals ───────────────────────────────────────────────── */
+
+&wdt {
+	status = "okay";
+};
+
+&uicr {
+	/* RESET button (S2) wired to nRESET — not a readable GPIO */
+	gpio-as-nreset;
+};
+
+&gpiote {
+	status = "okay";
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+/* SE052F (IC1) — subscriber signing secure element */
+&i2c0 {
+	compatible = "nordic,nrf-twi";
+	status = "okay";
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-1 = <&i2c0_sleep>;
+	pinctrl-names = "default", "sleep";
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+
+	se052f: se052f@48 {
+		compatible = "dtii,se052f";
+		reg = <0x48>;
+		label = "SE052F";
+		status = "okay";
+	};
+};
+
+/* SE050 (IC2) — Phase-1 bring-up is gated by CONFIG_QDSD_SE050. */
+&i2c1 {
+	compatible = "nordic,nrf-twi";
+	status = "okay";
+	pinctrl-0 = <&i2c1_default>;
+	pinctrl-1 = <&i2c1_sleep>;
+	pinctrl-names = "default", "sleep";
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+
+	se050: se050@48 {
+		compatible = "dtii,se050";
+		reg = <0x48>;
+		label = "SE050";
+		status = "okay";
+	};
+};
+
+/* S25FL064L (IC4) — external QSPI NOR flash, 64 Mbit */
+&qspi {
+	status = "okay";
+	pinctrl-0 = <&qspi_default>;
+	pinctrl-1 = <&qspi_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	s25fl064l: s25fl064l@0 {
+		compatible = "nordic,qspi-nor";
+		reg = <0>;
+		label = "S25FL064L";
+		jedec-id = [01 60 17];
+		size = <67108864>;
+		sck-frequency = <8000000>;
+		sck-delay = <62>;
+		writeoc = "pp";        /* was "pp4io" */
+		readoc = "fastread";   /* was "read4io" */
+		has-dpd;
+		t-enter-dpd = <10000>;
+		t-exit-dpd = <35000>;
+	};
+};
+
+&ieee802154 {
+	status = "okay";
+};
+
+zephyr_udc0: &usbd {
+	compatible = "nordic,nrf-usbd";
+	status = "okay";
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x00000000 0x0000C000>;
+		};
+
+		slot0_partition: partition@c000 {
+			label = "image-0";
+			reg = <0x0000C000 0x00077000>;
+		};
+
+		slot1_partition: partition@83000 {
+			label = "image-1";
+			reg = <0x00083000 0x00075000>;
+		};
+
+		storage_partition: partition@f8000 {
+			label = "storage";
+			reg = <0x000f8000 0x00004000>;
+		};
+
+		qdsd_nvs_partition: partition@fc000 {
+			label = "qdsd-nvs";
+			reg = <0x000fc000 0x00004000>;
+		};
+	};
+};

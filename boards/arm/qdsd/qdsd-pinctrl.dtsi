@@ -1,0 +1,85 @@
+/*
+ * qdsd-pinctrl.dtsi — QDSD custom PCBA (MDBT50Q-1MV2 / nRF52840)
+ *
+ * Pin map (schematic QDSD rev 2, do not change without schematic update):
+ *
+ *   Function              nRF GPIO    Schematic net
+ *   ─────────────────────────────────────────────────────
+ *   SE052F I2C SDA        P0.27       SE1_SDA
+ *   SE052F I2C SCL        P0.26       SE1_SCL
+ *   SE050 I2C SDA         P1.01       SE2_SDA
+ *   SE050 I2C SCL         P1.02       SE2_SCL
+ *   SE050 ENA             P0.13       SE2_EN    — GPIO, not pinctrl (see qdsd.dts)
+ *   S25FL064 QSPI SCK     P0.19       SPI_CLK
+ *   S25FL064 QSPI IO0     P0.22       SPI_IO0
+ *   S25FL064 QSPI IO1     P0.21       SPI_IO1
+ *   S25FL064 QSPI IO2/WP  P0.23       SPI_IO2/WP
+ *   S25FL064 QSPI IO3/HOLD P0.24      SPI_IO3/HOLD
+ *   S25FL064 QSPI CSN     P0.17       SPI_CS
+ *
+ * GPIO-controlled signals are defined in qdsd.dts (not pinctrl):
+ *   TS3USB221 OE          P0.08       GPIO_OE
+ *   TS3USB221 S           P0.06       GPIO_SEL
+ *   Status LED green      P0.14       LED_G
+ *   Status LED orange     P0.15       LED_O
+ *   Status LED blue       P0.16       LED_B
+ */
+
+&pinctrl {
+
+	i2c0_default: i2c0_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 27)>,
+				<NRF_PSEL(TWIM_SCL, 0, 26)>;
+			bias-pull-up;
+		};
+	};
+
+	i2c0_sleep: i2c0_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 27)>,
+				<NRF_PSEL(TWIM_SCL, 0, 26)>;
+			low-power-enable;
+		};
+	};
+
+	i2c1_default: i2c1_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 1, 1)>,
+				<NRF_PSEL(TWIM_SCL, 1, 2)>;
+			bias-pull-up;
+		};
+	};
+
+	i2c1_sleep: i2c1_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 1, 1)>,
+				<NRF_PSEL(TWIM_SCL, 1, 2)>;
+			low-power-enable;
+		};
+	};
+
+	qspi_default: qspi_default {
+		group1 {
+			psels = <NRF_PSEL(QSPI_SCK, 0, 19)>,
+				<NRF_PSEL(QSPI_IO0, 0, 22)>,
+				<NRF_PSEL(QSPI_IO1, 0, 21)>,
+				<NRF_PSEL(QSPI_IO2, 0, 23)>,
+				<NRF_PSEL(QSPI_IO3, 0, 24)>,
+				<NRF_PSEL(QSPI_CSN, 0, 17)>;
+			nordic,drive-mode = <NRF_DRIVE_H0H1>;
+		};
+	};
+
+	qspi_sleep: qspi_sleep {
+		group1 {
+			psels = <NRF_PSEL(QSPI_SCK, 0, 19)>,
+				<NRF_PSEL(QSPI_IO0, 0, 22)>,
+				<NRF_PSEL(QSPI_IO1, 0, 21)>,
+				<NRF_PSEL(QSPI_IO2, 0, 23)>,
+				<NRF_PSEL(QSPI_IO3, 0, 24)>,
+				<NRF_PSEL(QSPI_CSN, 0, 17)>;
+			low-power-enable;
+		};
+	};
+};
