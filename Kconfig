@@ -1,0 +1,100 @@
+menu "QDSD firmware (Flows v3.4, protocol v3.2)"
+
+config QDSD_DSC_SLOTS
+	int "Number of DSC key slots in SE052F"
+	default 4
+	range 1 8
+	help
+	  Each slot holds one Subscriber DSC key pair and its certificate.
+	  KEYGEN and import use an empty slot, else reuse the oldest key that
+	  never got a certificate (abandoned download). DELETE_KEY (phone
+	  approved) and RESET free certified slots.
+
+config QDSD_NONCE_TTL_S
+	int "Lifetime of a GET_SESSION_NONCE nonce (seconds)"
+	default 600
+	range 30 3600
+	help
+	  Time allowed between GET_SESSION_NONCE and SIGN, which covers the
+	  Subscriber approving on the phone. The nonce is also discarded on USB
+	  reset, unplug, a new GET_SESSION_NONCE, or 3 failed signature checks.
+
+config QDSD_NONCE_SLOTS
+	int "Outstanding GET_SESSION_NONCE nonces"
+	default 4
+	range 1 8
+	help
+	  Several signing apps (and a login) can wait for phone approval at the
+	  same time. A new nonce replaces the oldest only when all are in use.
+
+config QDSD_SESSION_IDLE_S
+	int "Login session idle timeout (seconds)"
+	default 28800
+	range 60 86400
+	help
+	  Flow 2b: a session opened by LOGIN returns to LOGGED_OUT after this
+	  many seconds with no accepted command. Does not apply when the
+	  Subscriber has turned login approval off, or to the session opened by
+	  pairing (that one lasts until the token is unplugged).
+
+config QDSD_RECEIPT_RING
+	int "Signing receipts kept in the SE050"
+	default 16
+	range 4 64
+	help
+	  Every SIGN saves its device-signed receipt (and the DSC signature) in
+	  the SE050 before replying, so a lost reply can be fetched again with
+	  GET_RECEIPT. The oldest is overwritten. Each entry is a 528-byte
+	  binary object. Changing this on tokens in the field renumbers the
+	  ring: only change it for new production.
+
+config QDSD_VERIFY_IN_SE
+	bool "Check phone and cloud signatures inside the SE050"
+	default y
+	help
+	  Signatures by the stored DTI command key and phone activation key are
+	  checked with the SE050's ECDSAVerify against the key object, so the
+	  check runs in the element holding the keys. Say n only to rule the
+	  SE out while bringing up new hardware: mbedTLS on the MCU then checks
+	  against the public key read out of the SE050.
+
+config QDSD_OID_SE050_BASE
+	hex "Object-id range base in the SE050"
+	default 0x51DE0000
+	help
+	  All QDSD objects in the SE050 live at this base + fixed offsets
+	  (docs/OBJECT_IDS.md). Must stay below 0x7FFF0000 (NXP reserved).
+	  Changing it orphans objects on existing tokens.
+
+config QDSD_OID_SE052F_BASE
+	hex "Object-id range base in the SE052F"
+	default 0x5D5C0000
+	help
+	  DSC keys, slot records and DSC certificates live at this base +
+	  fixed offsets (docs/OBJECT_IDS.md). Changing it orphans objects on
+	  existing tokens.
+
+config QDSD_SCP03_LAB_KEYS
+	bool "Use NXP default Platform SCP03 keys (LAB ONLY)"
+	depends on PLUGANDTRUST_SCP03
+	help
+	  NXP's published SE050/SE052F default keys. They are public, so the I2C
+	  link to the secure elements is unprotected. Production images use the
+	  per-batch keys in scp03_prod_keys.h (QDSD_KEYS_DIR) instead.
+
+choice QDSD_SE050_VARIANT
+	prompt "SE050 variant (selects lab SCP03 key set)"
+	default QDSD_SE050_C2
+	depends on QDSD_SCP03_LAB_KEYS
+
+config QDSD_SE050_C1
+	bool "SE050C1 (OEF A200)"
+
+config QDSD_SE050_C2
+	bool "SE050C2 (OEF A201)"
+
+endchoice
+
+endmenu
+
+source "Kconfig.zephyr"

@@ -1,0 +1,6 @@
+build/
+tests/host/*.so
+__pycache__/
+keys/*.pem
+*.pem
+scp03_prod_keys.h
