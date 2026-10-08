@@ -1,0 +1,57 @@
+# Fixed flash layout for the QDSD token (nRF52840, 1 MB), NCS Partition Manager.
+#
+# Used by every --sysbuild build (MCUboot + app). A fixed layout is required
+# for products: MCUboot is programmed once at the factory and every later
+# application image must use the same slots. Do not change it after the
+# first tokens ship.
+#
+#   0x00000  mcuboot              48 KB  bootloader (overwrite-only, ECDSA P-256)
+#   0x0C000  mcuboot_primary     480 KB  = mcuboot_pad (512 B header) + app
+#   0x84000  mcuboot_secondary   480 KB  image staged by UPDATE_BEGIN/WRITE/FINISH
+#   0xFC000  nvs_storage          16 KB  NVS: 0.3-0.5 records, read once for migration
+#
+# nvs_storage sits where the QDSD board devicetree puts qdsd_nvs_partition
+# (0xFC000, 4 x 4 KB), so builds with and without Partition Manager use the
+# same flash.
+mcuboot:
+  address: 0x0
+  end_address: 0xc000
+  region: flash_primary
+  size: 0xc000
+mcuboot_pad:
+  address: 0xc000
+  end_address: 0xc200
+  region: flash_primary
+  size: 0x200
+app:
+  address: 0xc200
+  end_address: 0x84000
+  region: flash_primary
+  size: 0x77e00
+mcuboot_primary:
+  address: 0xc000
+  end_address: 0x84000
+  orig_span: &id001
+  - mcuboot_pad
+  - app
+  region: flash_primary
+  size: 0x78000
+  span: *id001
+mcuboot_primary_app:
+  address: 0xc200
+  end_address: 0x84000
+  orig_span: &id002
+  - app
+  region: flash_primary
+  size: 0x77e00
+  span: *id002
+mcuboot_secondary:
+  address: 0x84000
+  end_address: 0xfc000
+  region: flash_primary
+  size: 0x78000
+nvs_storage:
+  address: 0xfc000
+  end_address: 0x100000
+  region: flash_primary
+  size: 0x4000

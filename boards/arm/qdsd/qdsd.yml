@@ -1,0 +1,21 @@
+identifier: qdsd/nrf52840
+name: QDSD Custom Companion Adapter
+vendor: dtii
+type: mcu
+arch: arm
+ram: 256
+flash: 1024
+toolchain:
+  - zephyr
+  - gnuarmemb
+  - xtools
+supported:
+  - adc
+  - gpio
+  - i2c
+  - spi
+  - flash
+  - usb_device
+  - ble
+  - watchdog
+  - counter
